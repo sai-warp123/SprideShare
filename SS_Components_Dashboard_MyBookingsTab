@@ -1,0 +1,180 @@
+import React, { useState, useEffect } from "react";
+import { Ride } from "@/entities/Ride";
+import { Booking } from "@/entities/Booking";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MapPin, Calendar, Users, DollarSign, Phone, X } from "lucide-react";
+import { format } from "date-fns";
+
+export default function MyBookingsTab({ bookings, onBookingUpdate }) {
+  const [bookingsWithRides, setBookingsWithRides] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadBookingDetails();
+  }, [bookings]);
+
+  const loadBookingDetails = async () => {
+    try {
+      const bookingsWithRideData = await Promise.all(
+        bookings.map(async (booking) => {
+          const rides = await Ride.filter({ id: booking.ride_id });
+          return {
+            ...booking,
+            ride: rides[0] || null
+          };
+        })
+      );
+      setBookingsWithRides(bookingsWithRideData);
+    } catch (error) {
+      console.error("Error loading booking details:", error);
+    }
+    setLoading(false);
+  };
+
+  const handleCancelBooking = async (bookingId) => {
+    if (window.confirm("Are you sure you want to cancel this booking?")) {
+      try {
+        await Booking.update(bookingId, { status: "cancelled" });
+        onBookingUpdate();
+      } catch (error) {
+        console.error("Error cancelling booking:", error);
+        alert("Failed to cancel booking. Please try again.");
+      }
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "confirmed":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "completed":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "cancelled":
+        return "bg-red-100 text-red-800 border-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        {Array(3).fill(0).map((_, i) => (
+          <Card key={i} className="glass-card">
+            <CardContent className="p-6">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (bookingsWithRides.length === 0) {
+    return (
+      <Card className="text-center py-12">
+        <CardContent>
+          <div className="w-16 h-16 bg-[#37D5D6]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-8 h-8 text-[#37D5D6]" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No bookings yet
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Start booking rides to get around campus and the Bay Area.
+          </p>
+          <Button className="bg-[#37D5D6] hover:bg-[#2BC4C5] text-white">
+            Find a Ride
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {bookingsWithRides.map((booking) => (
+        <Card key={booking.id} className="glass-card hover-lift">
+          <CardHeader>
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <CardTitle className="text-lg">
+                    {booking.ride?.origin} → {booking.ride?.destination}
+                  </CardTitle>
+                  <Badge className={getStatusColor(booking.status)}>
+                    {booking.status}
+                  </Badge>
+                </div>
+                <div className="flex items-center text-gray-600 mb-2">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <span className="text-sm">
+                    {booking.ride?.departure_datetime && format(new Date(booking.ride.departure_datetime), "MMM d, yyyy 'at' h:mm a")}
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                {booking.status === "confirmed" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCancelBooking(booking.id)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="flex items-center text-gray-600">
+                <Users className="w-4 h-4 mr-2 text-[#37D5D6]" />
+                <div>
+                  <div className="text-sm font-medium">Seats Booked</div>
+                  <div className="text-sm">{booking.seats_booked}</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center text-gray-600">
+                <DollarSign className="w-4 h-4 mr-2 text-[#37D5D6]" />
+                <div>
+                  <div className="text-sm font-medium">Total Paid</div>
+                  <div className="text-sm font-semibold">${booking.total_price}</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center text-gray-600">
+                <div>
+                  <div className="text-sm font-medium">Booking ID</div>
+                  <div className="text-sm font-mono">#{booking.id.slice(-6)}</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center text-gray-600">
+                <div>
+                  <div className="text-sm font-medium">Booked On</div>
+                  <div className="text-sm">{format(new Date(booking.created_date), "MMM d")}</div>
+                </div>
+              </div>
+            </div>
+            
+            {booking.pickup_notes && (
+              <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  <strong>Pickup Notes:</strong> {booking.pickup_notes}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
