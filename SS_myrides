@@ -1,0 +1,91 @@
+import React, { useState, useEffect } from "react";
+import { User } from "@/entities/User";
+import { Ride } from "@/entities/Ride";
+import { Booking } from "@/entities/Booking";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Car, Search } from "lucide-react";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+
+import MyRidesTab from "../components/dashboard/MyRidesTab";
+import MyBookingsTab from "../components/dashboard/MyBookingsTab";
+
+export default function MyRides() {
+  const [user, setUser] = useState(null);
+  const [rides, setRides] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  const loadUserData = async () => {
+    try {
+      const currentUser = await User.me();
+      setUser(currentUser);
+      
+      // Load user's rides (as driver)
+      const userRides = await Ride.filter({ driver_id: currentUser.id }, "-created_date");
+      setRides(userRides);
+      
+      // Load user's bookings (as rider)
+      const userBookings = await Booking.filter({ rider_id: currentUser.id }, "-created_date");
+      setBookings(userBookings);
+    } catch (error) {
+      console.error("Error loading user data:", error);
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5D4EFC]"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Rides</h1>
+            <p className="text-gray-600">Manage your rides and bookings</p>
+          </div>
+          <Link to={createPageUrl("CreateRide")}>
+            <Button className="bg-[#5D4EFC] hover:bg-[#4B3FD1] text-white hover-lift">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Ride
+            </Button>
+          </Link>
+        </div>
+
+        <Tabs defaultValue="rides" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-8">
+            <TabsTrigger value="rides" className="flex items-center gap-2">
+              <Car className="w-4 h-4" />
+              My Rides ({rides.length})
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="flex items-center gap-2">
+              <Search className="w-4 h-4" />
+              My Bookings ({bookings.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="rides">
+            <MyRidesTab rides={rides} onRideUpdate={loadUserData} />
+          </TabsContent>
+
+          <TabsContent value="bookings">
+            <MyBookingsTab bookings={bookings} onBookingUpdate={loadUserData} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
