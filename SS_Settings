@@ -1,0 +1,212 @@
+import React, { useState, useEffect } from "react";
+import { User } from "@/entities/User";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Settings as SettingsIcon, Bell, Shield, CreditCard, Mail, Phone } from "lucide-react";
+
+export default function Settings() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState({
+    emailNotifications: true,
+    rideReminders: true,
+    bookingConfirmations: true,
+    marketingEmails: false
+  });
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await User.me();
+      setUser(currentUser);
+    } catch (error) {
+      console.error("Error loading user:", error);
+    }
+    setLoading(false);
+  };
+
+  const handleSettingChange = (setting, value) => {
+    setSettings(prev => ({
+      ...prev,
+      [setting]: value
+    }));
+  };
+
+  const saveSettings = async () => {
+    try {
+      await User.updateMyUserData({ notification_settings: settings });
+      alert("Settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Failed to save settings. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5D4EFC]"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+          <p className="text-gray-600">Manage your account preferences and privacy settings</p>
+        </div>
+
+        <div className="space-y-6">
+          {/* Account Information */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Account Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium">Email</p>
+                    <p className="text-sm text-gray-600">{user?.email}</p>
+                  </div>
+                  <Badge className="bg-green-100 text-green-800 border-green-200">
+                    Verified
+                  </Badge>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-gray-400" />
+                  <div>
+                    <p className="text-sm font-medium">Phone</p>
+                    <p className="text-sm text-gray-600">{user?.phone || "Not provided"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Student ID</p>
+                  <p className="text-sm text-gray-600">{user?.student_id || "Not provided"}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium">Role</p>
+                  <p className="text-sm text-gray-600 capitalize">{user?.user_role || "Not set"}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notification Settings */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="w-5 h-5" />
+                Notification Preferences
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="email-notifications">Email Notifications</Label>
+                  <p className="text-sm text-gray-600">Receive important updates via email</p>
+                </div>
+                <Switch
+                  id="email-notifications"
+                  checked={settings.emailNotifications}
+                  onCheckedChange={(checked) => handleSettingChange("emailNotifications", checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="ride-reminders">Ride Reminders</Label>
+                  <p className="text-sm text-gray-600">Get notified 1 hour before your ride</p>
+                </div>
+                <Switch
+                  id="ride-reminders"
+                  checked={settings.rideReminders}
+                  onCheckedChange={(checked) => handleSettingChange("rideReminders", checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="booking-confirmations">Booking Confirmations</Label>
+                  <p className="text-sm text-gray-600">Receive confirmations for new bookings</p>
+                </div>
+                <Switch
+                  id="booking-confirmations"
+                  checked={settings.bookingConfirmations}
+                  onCheckedChange={(checked) => handleSettingChange("bookingConfirmations", checked)}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="marketing-emails">Marketing Emails</Label>
+                  <p className="text-sm text-gray-600">Receive updates about new features</p>
+                </div>
+                <Switch
+                  id="marketing-emails"
+                  checked={settings.marketingEmails}
+                  onCheckedChange={(checked) => handleSettingChange("marketingEmails", checked)}
+                />
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  onClick={saveSettings}
+                  className="bg-[#5D4EFC] hover:bg-[#4B3FD1] text-white"
+                >
+                  Save Preferences
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Privacy & Security */}
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Privacy & Security
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-[#F4F5FA] rounded-lg">
+                <h3 className="font-semibold mb-2">Student Verification</h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  Your @sjsu.edu email address is automatically verified through Google authentication.
+                </p>
+                <Badge className="bg-green-100 text-green-800 border-green-200">
+                  ✓ Verified SJSU Student
+                </Badge>
+              </div>
+
+              <div className="p-4 bg-[#F4F5FA] rounded-lg">
+                <h3 className="font-semibold mb-2">Data Privacy</h3>
+                <p className="text-sm text-gray-600">
+                  Your personal information is only shared with other verified SJSU students 
+                  when you book or offer rides. We never share your data with third parties.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
