@@ -1,0 +1,194 @@
+import React, { useState, useEffect } from "react";
+import { User } from "@/entities/User";
+import { Ride } from "@/entities/Ride";
+import { Booking } from "@/entities/Booking";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Search, MapPin, Calendar, Users, DollarSign, Car } from "lucide-react";
+import { format } from "date-fns";
+
+import SearchFilters from "../components/rides/SearchFilters";
+import RideCard from "../components/rides/RideCard";
+import BookingModal from "../components/rides/BookingModal";
+
+export default function FindRides() {
+  const [user, setUser] = useState(null);
+  const [rides, setRides] = useState([]);
+  const [filteredRides, setFilteredRides] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedRide, setSelectedRide] = useState(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [searchFilters, setSearchFilters] = useState({
+    origin: "",
+    destination: "",
+    date: "",
+    maxPrice: 50
+  });
+
+  useEffect(() => {
+    loadUserAndRides();
+  }, []);
+
+  useEffect(() => {
+    filterRides();
+  }, [rides, searchFilters]);
+
+  const loadUserAndRides = async () => {
+    try {
+      const currentUser = await User.me();
+      setUser(currentUser);
+      
+      const availableRides = await Ride.filter({ status: "active" }, "-departure_datetime");
+      setRides(availableRides);
+    } catch (error) {
+      console.error("Error loading data:", error);
+    }
+    setLoading(false);
+  };
+
+  const filterRides = () => {
+    let filtered = rides.filter(ride => {
+      // Don't show user's own rides
+      if (ride.driver_id === user?.id) return false;
+      
+      // Filter by origin
+      if (searchFilters.origin && !ride.origin.toLowerCase().includes(searchFilters.origin.toLowerCase())) {
+        return false;
+      }
+      
+      // Filter by destination
+      if (searchFilters.destination && !ride.destination.toLowerCase().includes(searchFilters.destination.toLowerCase())) {
+        return false;
+      }
+      
+      // Filter by date
+      if (searchFilters.date) {
+        const rideDate = new Date(ride.departure_datetime).toDateString();
+        const filterDate = new Date(searchFilters.date).toDateString();
+        if (rideDate !== filterDate) return false;
+      }
+      
+      // Filter by price
+      if (ride.price_per_seat > searchFilters.maxPrice) {
+        return false;
+      }
+      
+      return true;
+    });
+    
+    setFilteredRides(filtered);
+  };
+
+  const handleBookRide = (ride) => {
+    setSelectedRide(ride);
+    setShowBookingModal(true);
+  };
+
+  const handleBookingSubmit = async (bookingData) => {
+    try {
+      // Create booking
+      await Booking.create({
+        ride_id: selectedRide.id,
+        rider_id: user.id,
+        seats_booked: bookingData.seats,
+        total_price: bookingData.seats * selectedRide.price_per_seat,
+        pickup_notes: bookingData.notes,
+        rider_contact: user.phone
+      });
+      
+      // Update available seats
+      await Ride.update(selectedRide.id, {
+        available_seats: selectedRide.available_seats - bookingData.seats
+      });
+      
+      setShowBookingModal(false);
+      setSelectedRide(null);
+      
+      // Reload rides
+      loadUserAndRides();
+      
+      alert("Booking confirmed! You'll receive a confirmation email shortly.");
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      alert("Failed to book ride. Please try again.");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5D4EFC]"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Find a Ride</h1>
+          <p className="text-gray-600">Search for rides shared by fellow SJSU students</p>
+        </div>
+
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Search Filters */}
+          <div className="lg:col-span-1">
+            <SearchFilters 
+              filters={searchFilters}
+              onFiltersChange={setSearchFilters}
+            />
+          </div>
+
+          {/* Ride Results */}
+          <div className="lg:col-span-3">
+            <div className="mb-6">
+              <p className="text-gray-600">
+                Found {filteredRides.length} ride{filteredRides.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {filteredRides.map((ride) => (
+                <RideCard
+                  key={ride.id}
+                  ride={ride}
+                  onBook={() => handleBookRide(ride)}
+                />
+              ))}
+              
+              {filteredRides.length === 0 && (
+                <Card className="text-center py-12">
+                  <CardContent>
+                    <Car className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      No rides found
+                    </h3>
+                    <p className="text-gray-600">
+                      Try adjusting your search filters or check back later for new rides.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Booking Modal */}
+      {showBookingModal && selectedRide && (
+        <BookingModal
+          ride={selectedRide}
+          onSubmit={handleBookingSubmit}
+          onClose={() => {
+            setShowBookingModal(false);
+            setSelectedRide(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
