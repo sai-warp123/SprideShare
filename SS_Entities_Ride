@@ -1,0 +1,81 @@
+{
+  "name": "Ride",
+  "type": "object",
+  "properties": {
+    "driver_id": {
+      "type": "string",
+      "description": "ID of the driver who created the ride"
+    },
+    "origin": {
+      "type": "string",
+      "description": "Starting location"
+    },
+    "destination": {
+      "type": "string",
+      "description": "Destination location"
+    },
+    "origin_lat": {
+      "type": "number",
+      "description": "Origin latitude"
+    },
+    "origin_lng": {
+      "type": "number",
+      "description": "Origin longitude"
+    },
+    "destination_lat": {
+      "type": "number",
+      "description": "Destination latitude"
+    },
+    "destination_lng": {
+      "type": "number",
+      "description": "Destination longitude"
+    },
+    "departure_datetime": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Departure date and time"
+    },
+    "total_seats": {
+      "type": "number",
+      "description": "Total available seats"
+    },
+    "available_seats": {
+      "type": "number",
+      "description": "Currently available seats"
+    },
+    "price_per_seat": {
+      "type": "number",
+      "description": "Price per seat in USD"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "completed",
+        "cancelled"
+      ],
+      "default": "active",
+      "description": "Status of the ride"
+    },
+    "description": {
+      "type": "string",
+      "description": "Additional details about the ride"
+    },
+    "car_model": {
+      "type": "string",
+      "description": "Car model and color"
+    },
+    "driver_preferences": {
+      "type": "string",
+      "description": "Driver preferences (music, AC, etc.)"
+    }
+  },
+  "required": [
+    "driver_id",
+    "origin",
+    "destination",
+    "departure_datetime",
+    "total_seats",
+    "price_per_seat"
+  ]
+}
