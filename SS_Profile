@@ -1,0 +1,230 @@
+import React, { useState, useEffect } from "react";
+import { User } from "@/entities/User";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { User as UserIcon, Mail, Phone, GraduationCap, Car, Search } from "lucide-react";
+
+export default function Profile() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formData, setFormData] = useState({
+    student_id: "",
+    phone: "",
+    user_role: "rider",
+    year_of_study: "",
+    major: "",
+    bio: ""
+  });
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await User.me();
+      setUser(currentUser);
+      setFormData({
+        student_id: currentUser.student_id || "",
+        phone: currentUser.phone || "",
+        user_role: currentUser.user_role || "rider",
+        year_of_study: currentUser.year_of_study || "",
+        major: currentUser.major || "",
+        bio: currentUser.bio || ""
+      });
+    } catch (error) {
+      console.error("Error loading user:", error);
+    }
+    setLoading(false);
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      await User.updateMyUserData(formData);
+      alert("Profile updated successfully!");
+      loadUser();
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("Failed to update profile. Please try again.");
+    }
+    setSaving(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#5D4EFC]"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Settings</h1>
+          <p className="text-gray-600">Manage your account information and preferences</p>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Profile Summary */}
+          <div className="lg:col-span-1">
+            <Card className="glass-card">
+              <CardContent className="p-6 text-center">
+                <Avatar className="h-24 w-24 mx-auto mb-4">
+                  <AvatarImage src={user?.profile_photo} alt={user?.full_name} />
+                  <AvatarFallback className="bg-[#5D4EFC] text-white text-xl">
+                    {user?.full_name?.charAt(0) || user?.email?.charAt(0) || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                
+                <h2 className="text-xl font-semibold mb-1">{user?.full_name || "User"}</h2>
+                <p className="text-gray-500 mb-4">{user?.email}</p>
+                
+                <div className="space-y-2">
+                  <Badge className="bg-[#5D4EFC]/10 text-[#5D4EFC] border-[#5D4EFC]">
+                    {user?.verification_status === "verified" ? "✓ Verified Student" : "Pending Verification"}
+                  </Badge>
+                  
+                  {user?.user_role && (
+                    <div className="flex justify-center">
+                      <Badge variant="outline" className="flex items-center gap-1">
+                        {user.user_role === "driver" ? <Car className="w-3 h-3" /> : <Search className="w-3 h-3" />}
+                        {user.user_role.charAt(0).toUpperCase() + user.user_role.slice(1)}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Profile Form */}
+          <div className="lg:col-span-2">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle>Update Profile</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="student_id">Student ID</Label>
+                      <div className="relative">
+                        <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="student_id"
+                          type="text"
+                          placeholder="012345678"
+                          value={formData.student_id}
+                          onChange={(e) => handleInputChange("student_id", e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="(408) 555-0123"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange("phone", e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="user_role">Role Preference</Label>
+                    <Select value={formData.user_role} onValueChange={(value) => handleInputChange("user_role", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rider">Rider (Find rides)</SelectItem>
+                        <SelectItem value="driver">Driver (Offer rides)</SelectItem>
+                        <SelectItem value="both">Both (Find and offer rides)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="year_of_study">Year of Study</Label>
+                      <Select value={formData.year_of_study} onValueChange={(value) => handleInputChange("year_of_study", value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="freshman">Freshman</SelectItem>
+                          <SelectItem value="sophomore">Sophomore</SelectItem>
+                          <SelectItem value="junior">Junior</SelectItem>
+                          <SelectItem value="senior">Senior</SelectItem>
+                          <SelectItem value="graduate">Graduate</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="major">Major</Label>
+                      <Input
+                        id="major"
+                        type="text"
+                        placeholder="Computer Science"
+                        value={formData.major}
+                        onChange={(e) => handleInputChange("major", e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      placeholder="Tell us a bit about yourself..."
+                      value={formData.bio}
+                      onChange={(e) => handleInputChange("bio", e.target.value)}
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button
+                      type="submit"
+                      disabled={saving}
+                      className="bg-[#5D4EFC] hover:bg-[#4B3FD1] text-white"
+                    >
+                      {saving ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
