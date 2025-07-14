@@ -1,0 +1,259 @@
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { User } from "@/entities/User";
+import { Ride } from "@/entities/Ride";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MapPin, Calendar, Users, DollarSign, Car, ArrowLeft } from "lucide-react";
+
+export default function CreateRide() {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    origin: "",
+    destination: "",
+    departure_datetime: "",
+    total_seats: 1,
+    price_per_seat: 5,
+    description: "",
+    car_model: "",
+    driver_preferences: ""
+  });
+
+  React.useEffect(() => {
+    loadUser();
+  }, []);
+
+  const loadUser = async () => {
+    try {
+      const currentUser = await User.me();
+      setUser(currentUser);
+    } catch (error) {
+      navigate(createPageUrl("Login"));
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await Ride.create({
+        ...formData,
+        driver_id: user.id,
+        available_seats: formData.total_seats,
+        status: "active"
+      });
+      
+      navigate(createPageUrl("MyRides"));
+    } catch (error) {
+      console.error("Error creating ride:", error);
+      alert("Failed to create ride. Please try again.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(createPageUrl("MyRides"))}
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create a Ride</h1>
+            <p className="text-gray-600">Share your journey with fellow SJSU students</p>
+          </div>
+        </div>
+
+        <Card className="glass-card">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Car className="w-5 h-5" />
+              Ride Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="origin">From</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="origin"
+                      placeholder="San José State University"
+                      value={formData.origin}
+                      onChange={(e) => handleInputChange("origin", e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="destination">To</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="destination"
+                      placeholder="San Francisco, CA"
+                      value={formData.destination}
+                      onChange={(e) => handleInputChange("destination", e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="departure_datetime">Departure Date & Time</Label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="departure_datetime"
+                    type="datetime-local"
+                    value={formData.departure_datetime}
+                    onChange={(e) => handleInputChange("departure_datetime", e.target.value)}
+                    className="pl-10"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="total_seats">Available Seats</Label>
+                  <Select 
+                    value={formData.total_seats.toString()} 
+                    onValueChange={(value) => handleInputChange("total_seats", parseInt(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select seats" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 seat</SelectItem>
+                      <SelectItem value="2">2 seats</SelectItem>
+                      <SelectItem value="3">3 seats</SelectItem>
+                      <SelectItem value="4">4 seats</SelectItem>
+                      <SelectItem value="5">5 seats</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="price_per_seat">Price per Seat ($)</Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="price_per_seat"
+                      type="number"
+                      min="1"
+                      max="100"
+                      step="0.50"
+                      value={formData.price_per_seat}
+                      onChange={(e) => handleInputChange("price_per_seat", parseFloat(e.target.value))}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="car_model">Car Model & Color (Optional)</Label>
+                <div className="relative">
+                  <Car className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="car_model"
+                    placeholder="e.g., Blue Honda Civic"
+                    value={formData.car_model}
+                    onChange={(e) => handleInputChange("car_model", e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Additional Details (Optional)</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Any additional information about the ride..."
+                  value={formData.description}
+                  onChange={(e) => handleInputChange("description", e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="driver_preferences">Driver Preferences (Optional)</Label>
+                <Textarea
+                  id="driver_preferences"
+                  placeholder="e.g., No smoking, music preferences, etc."
+                  value={formData.driver_preferences}
+                  onChange={(e) => handleInputChange("driver_preferences", e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              <div className="bg-[#F4F5FA] p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">Ride Summary</h3>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <div className="flex justify-between">
+                    <span>Total seats available:</span>
+                    <span className="font-semibold">{formData.total_seats}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Price per seat:</span>
+                    <span className="font-semibold">${formData.price_per_seat}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Maximum earnings:</span>
+                    <span className="font-semibold text-green-600">
+                      ${(formData.total_seats * formData.price_per_seat).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(createPageUrl("MyRides"))}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-[#5D4EFC] hover:bg-[#4B3FD1] text-white"
+                >
+                  {loading ? "Creating..." : "Create Ride"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
