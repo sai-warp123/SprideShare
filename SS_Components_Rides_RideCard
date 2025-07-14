@@ -1,0 +1,116 @@
+import React, { useState, useEffect } from "react";
+import { User } from "@/entities/User";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MapPin, Calendar, Users, DollarSign, Clock } from "lucide-react";
+import { format } from "date-fns";
+
+export default function RideCard({ ride, onBook }) {
+  const [driver, setDriver] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDriver();
+  }, [ride.driver_id]);
+
+  const loadDriver = async () => {
+    try {
+      const users = await User.filter({ id: ride.driver_id });
+      if (users.length > 0) {
+        setDriver(users[0]);
+      }
+    } catch (error) {
+      console.error("Error loading driver:", error);
+    }
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <Card className="glass-card">
+        <CardContent className="p-6">
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="glass-card hover-lift">
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={driver?.profile_photo} alt={driver?.full_name} />
+              <AvatarFallback className="bg-[#5D4EFC] text-white">
+                {driver?.full_name?.charAt(0) || "U"}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h3 className="font-semibold text-gray-900">{driver?.full_name}</h3>
+              <p className="text-sm text-gray-500">{driver?.year_of_study} • {driver?.major}</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-[#37D5D6]/10 text-[#37D5D6] border-[#37D5D6]">
+            {ride.available_seats} seats left
+          </Badge>
+        </div>
+
+        <div className="space-y-3 mb-4">
+          <div className="flex items-center text-gray-600">
+            <MapPin className="w-4 h-4 mr-2 text-[#5D4EFC]" />
+            <span className="text-sm">{ride.origin} → {ride.destination}</span>
+          </div>
+          
+          <div className="flex items-center text-gray-600">
+            <Calendar className="w-4 h-4 mr-2 text-[#5D4EFC]" />
+            <span className="text-sm">
+              {format(new Date(ride.departure_datetime), "MMM d, yyyy")}
+            </span>
+            <Clock className="w-4 h-4 ml-4 mr-2 text-[#5D4EFC]" />
+            <span className="text-sm">
+              {format(new Date(ride.departure_datetime), "h:mm a")}
+            </span>
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center text-gray-600">
+              <DollarSign className="w-4 h-4 mr-1 text-[#5D4EFC]" />
+              <span className="text-sm font-semibold">${ride.price_per_seat} per seat</span>
+            </div>
+            <div className="flex items-center text-gray-600">
+              <Users className="w-4 h-4 mr-1 text-[#5D4EFC]" />
+              <span className="text-sm">{ride.total_seats} total seats</span>
+            </div>
+          </div>
+        </div>
+
+        {ride.description && (
+          <p className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-lg">
+            {ride.description}
+          </p>
+        )}
+
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-gray-500">
+            {ride.car_model && (
+              <span>🚗 {ride.car_model}</span>
+            )}
+          </div>
+          <Button
+            onClick={onBook}
+            disabled={ride.available_seats === 0}
+            className="bg-[#5D4EFC] hover:bg-[#4B3FD1] text-white"
+          >
+            {ride.available_seats === 0 ? "Fully Booked" : "Book Ride"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
